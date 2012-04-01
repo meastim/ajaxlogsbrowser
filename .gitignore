@@ -6,7 +6,7 @@ cherryd.fcgi
 test.py
 build
 dist
-logviewer.egg-info
+ajaxlogsbrowser.egg-info
 python-libs
 *~
 test
