@@ -1,0 +1,14 @@
+.buildpath
+.project
+.settings
+config.php
+cherryd.fcgi
+test.py
+build
+dist
+logviewer.egg-info
+python-libs
+*~
+test
+*.pyc
+.pydevproject
