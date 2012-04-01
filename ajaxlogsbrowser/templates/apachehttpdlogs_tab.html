@@ -1,0 +1,255 @@
+<div xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:py="http://genshi.edgewall.org/"
+	xmlns:xi="http://www.w3.org/2001/XInclude"
+	id="tabs-${tab_index+1}" class="tab">
+<!--
+#
+# Copyright (c) 2012  Meastim
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+ -->
+	<div>
+		<form>
+			<table>
+				<tr>
+					<th><label for="select_logger_id${tab_index+1}">Logger
+							ID: </label></th>
+					<td><select id="select_logger_id${tab_index+1}"><option></option>
+					</select></td>
+					<th><label for="select_hostname${tab_index+1}">Hostname:
+					</label></th>
+					<td><select id="select_hostname${tab_index+1}"><option></option>
+					</select></td>
+					<th><label for="select_code_grp${tab_index+1}">HTTP
+							Status Code Group: </label></th>
+					<td><select id="select_code_grp${tab_index+1}"><option></option>
+							<option>1xx</option>
+							<option>2xx</option>
+							<option>3xx</option>
+							<option>4xx</option>
+							<option>5xx</option>
+					</select></td>
+					<th><label for="pathprefix${tab_index+1}">Path Prefix: </label></th>
+					<td><input id="pathprefix${tab_index+1}" type="text" /></td>
+				</tr>
+			</table>
+		</form>
+	</div>
+	<div id="log_grid${tab_index+1}" class="log_grid"> </div>
+
+	<script type="text/javascript">
+	//<![CDATA[
+		$(function() {
+			$("#date_input${tab_index+1}").datetimepicker({
+				dateFormat : 'yy-mm-dd',
+				timeFormat : 'hh:mm'
+			});
+
+			var spin_opts = {
+				lines : 12,
+				length : 7,
+				width : 4,
+				radius : 10,
+				color : '#000',
+				speed : 1,
+				trail : 60,
+				shadow : false,
+				hwaccel : false
+			};
+			var spinner = null;
+			
+			var columns = [
+      	   	    { id: "logger_id", name: "Logger ID", field: "logger_id", width: 60, cssClass: "logger_id" },
+	   	   	    { id: "hostname", name: "Hostname", field: "hostname", width: 60, cssClass: "hostname" },
+	   	   	    { id: "event_dt", name: "Event Date/Time", field: "event_dt", width: 140, cssClass: "event_dt" },
+	   	   	    { id: "ip_addr", name: "IP Addr.", field: "ip_addr", width: 80, cssClass: "ip_addr" },
+	   	   	    { id: "authname", name: "Auth. Name", field: "authname", width: 80, cssClass: "authname" },
+	   		    { id: "method", name: "Method", field: "method", cssClass: "httpmethod", width: 40 },
+	   		    { id: "status", name: "Status", field: "status", cssClass: "httpstatus", width: 40 },
+	   		    { id: "path", name: "Path", field: "path", cssClass: "path", width: 440 },
+	   		    { id: "size", name: "Size", field: "size", cssClass: "size", width: 50 },
+	   		    { id: "referer", name: "Ref.", field: "referer", cssClass: "referer", width: 200 },
+	   		    { id: "useragent", name: "U.A.", field: "useragent", cssClass: "useragent", width: 200 },
+	   		    { id: "protocol", name: "Protocol", field: "protocol", cssClass: "protocol", width: 50 }
+	   		];
+
+			var sg_options = {
+					formatterFactory: syslogFormatterFactory,
+					leaveSpaceForNewRows: true
+			};
+			
+			var offset = $('#log_grid${tab_index+1}').offset();
+			$('#log_grid${tab_index+1}').height($(window).height() - offset.top - 50);
+
+			var loader = new AjaxLogsBrowser.ApacheHttpdLogsRemoteModel();
+			loader.data.getItemMetadata = function (rowNum) {
+				var cssClasses = "";
+				var row = this[rowNum];
+				if (row) {
+					if (row['status'] >= 100 && row['status'] < 200) {
+						cssClasses += " httpstatus_1xx";
+					} else if (row['status'] >= 200 && row['status'] < 300) {
+						cssClasses += " httpstatus_2xx";
+					} else if (row['status'] >= 300 && row['status'] < 400) {
+						cssClasses += " httpstatus_3xx";
+					} else if (row['status'] >= 400 && row['status'] < 500) {
+						cssClasses += " httpstatus_4xx";
+					} else if (row['status'] >= 500 && row['status'] < 600) {
+						cssClasses += " httpstatus_5xx";
+					}
+					if (cssClasses) {
+						return {
+							"cssClasses": cssClasses
+						};
+					}
+				}
+			}
+
+			$("#update_button").click(function() {
+				if ($("#tabs").tabs('option', 'selected') == ${tab_index}) {
+					var state =	{
+						searchDateTime: $("#date_input").val(),
+						allDays: $("#day_only_chkbox").prop("checked") ? "0" : "1",
+								
+						logger_id: $("#select_logger_id${tab_index+1}").val(),
+						hostname: $("#select_hostname${tab_index+1}").val(),
+						httpstatus: $("#select_code_grp${tab_index+1}").val(),
+						pathPrefix: $("#pathprefix${tab_index+1}").val()
+					};
+					if ($.bbq.getState('tab') == null) {
+						state['tab'] = 0;
+					}
+					$.bbq.pushState(state);
+				}
+			});
+
+			$(window).bind('hashchange', function(e) {
+				if (($.bbq.getState('tab') == "${tab_index}") || ($.bbq.getState('tab') == null && "${tab_index}" == "0")) {
+					$("#date_input").val($.bbq.getState('searchDateTime'));
+					$("#day_only_chkbox").prop("checked", $.bbq.getState('allDays') === "1" ? false : true);
+					
+					$("#select_logger_id${tab_index+1}").val($.bbq.getState('logger_id'));
+					$("#select_hostname${tab_index+1}").val($.bbq.getState('hostname'));
+					$("#select_code_grp${tab_index+1}").val($.bbq.getState('httpstatus'));
+					$("#pathprefix${tab_index+1}").val($.bbq.getState('pathPrefix'));
+
+					loader.setSearchOptions($.extend({ tabIndex: "${tab_index}" }, $.bbq.getState()));
+
+					var vp = grid.getViewport();
+			        loader.ensureData(vp.top, vp.bottom, true);
+			        grid.render();
+				}
+			});
+
+			var grid = new Slick.Grid("#log_grid${tab_index+1}", loader.data, columns, sg_options);
+			grid.setSelectionModel(new Slick.RowSelectionModel());
+
+			grid.onViewportChanged.subscribe(function(e, args) {
+				var vp = grid.getViewport();
+				loader.ensureData(vp.top, vp.bottom, false);
+			});
+
+			loader.onDataLoading.subscribe(function() {			
+				if (spinner == null) {
+					spinner = new Spinner(spin_opts).spin(document.getElementById('log_grid${tab_index+1}'));
+				} else {
+					spinner.spin(document.getElementById('log_grid${tab_index+1}'));
+				}
+			});
+
+			loader.onDataLoaded.subscribe(function(e, args) {
+				if (spinner != null) {
+					spinner.stop();
+				}
+				for (var i = args.from; i <= args.to; i++) {
+					grid.invalidateRow(i);
+				}
+				grid.updateRowCount();
+				grid.render();
+
+				var currentHostname = $("#select_hostname${tab_index+1}").val();
+				$("#select_hostname${tab_index+1}").find('option').remove();
+				$('#select_hostname${tab_index+1}').append($("<option></option>"));
+				$.each(args.hostnames, function(key, value) {   
+				     $('#select_hostname${tab_index+1}')
+				         .append($("<option></option>")
+				         .text(value)); 
+				});
+				$("#select_hostname${tab_index+1}").val(currentHostname);
+
+				var currentLogger_id = $("#select_logger_id${tab_index+1}").val();
+				$("#select_logger_id${tab_index+1}").find('option').remove();
+				$('#select_logger_id${tab_index+1}').append($("<option></option>"));
+				$.each(args.logger_ids, function(key, value) {   
+				     $('#select_logger_id${tab_index+1}')
+				         .append($("<option></option>")
+				         .text(value)); 
+				});
+				$("#select_logger_id${tab_index+1}").val(currentLogger_id);
+
+				if (args.scrollTo != null) {
+					grid.scrollRowIntoView(args.scrollTo, true);
+				}
+			});
+
+			$("#date_input${tab_index+1}").val($.bbq.getState('searchDateTime'));
+			$("#day_only_chkbox").prop("checked", $.bbq.getState('allDays') === "1" ? false : true);
+			
+			$("#select_logger_id${tab_index+1}").val($.bbq.getState('logger_id'));
+			$("#select_hostname${tab_index+1}").val($.bbq.getState('hostname'));
+			$("#select_code_grp${tab_index+1}").val($.bbq.getState('httpstatus'));
+			$("#pathprefix${tab_index+1}").val($.bbq.getState('pathPrefix'));
+
+			$("#apachehttpdlogs_popup").dialog({ autoOpen: false, width: 1000, height: 600 });
+			grid.onDblClick.subscribe(function(e, args) {
+				$("#apachehttpdlogs_popup_event_dt").text(loader.data[args.row]['event_dt']);
+				$("#apachehttpdlogs_popup_logger_id").text(loader.data[args.row]['logger_id']);
+				$("#apachehttpdlogs_popup_hostname").text(loader.data[args.row]['hostname']);
+				$("#apachehttpdlogs_popup_ip_addr").text(loader.data[args.row]['ip_addr']);
+				$("#apachehttpdlogs_popup_authname").text(loader.data[args.row]['authname']);
+				$("#apachehttpdlogs_popup_status").text(loader.data[args.row]['status']);
+				
+				$("#apachehttpdlogs_popup_path").text(loader.data[args.row]['path']);
+				$("#apachehttpdlogs_popup_protocol").text(loader.data[args.row]['protocol']);
+				$("#apachehttpdlogs_popup_size").text(loader.data[args.row]['size']);
+				$("#apachehttpdlogs_popup_referer").text(loader.data[args.row]['referer']);
+				$("#apachehttpdlogs_popup_useragent").text(loader.data[args.row]['useragent']);
+				
+				$("#apachehttpdlogs_popup").dialog('open');
+			});
+
+			$(window).resize(function() {
+				var offset = $('#log_grid${tab_index+1}').offset();
+				$('#log_grid${tab_index+1}').height($(window).height() - offset.top - 50);
+				grid.resizeCanvas();
+			});
+			
+			$("#tabs").bind("tabsshow", function(event, ui) {
+				if (ui.index == ${tab_index}) {
+					var offset = $('#log_grid${tab_index+1}').offset();
+					$('#log_grid${tab_index+1}').height($(window).height() - offset.top - 50);
+					grid.resizeCanvas();
+				}
+			});
+		});
+		//]]>
+	</script>
+</div>

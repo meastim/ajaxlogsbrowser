@@ -1,0 +1,258 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:py="http://genshi.edgewall.org/"
+	xmlns:xi="http://www.w3.org/2001/XInclude" lang="en">
+<!--
+#
+# Copyright (c) 2012  Meastim
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+ -->
+<head>
+<script py:for="script_location in script_locations"
+	type="application/javascript" src="${script_location}"></script>
+<link py:for="css_location in css_locations" rel="stylesheet"
+	type="text/css" href="${css_location}" />
+<style type="text/css">
+html {
+}
+
+body {
+	font-family: Lucida, Verdana, sans-serif;
+	font-size: 12pt;
+	background-color: #b4b4b4;
+	text-align: center;
+}
+
+#container {
+	background-color: #e4e4e4;
+	width: 1280px;
+	margin: 0px auto;
+	text-align: left;
+	box-sizing: border-box;
+}
+
+#tabs {
+	margin: 0px auto;
+	box-sizing: border-box;
+}
+
+.tab {
+	box-sizing: border-box;
+}
+
+.log_grid {
+	width: 100%;
+	box-sizing: border-box;
+	text-align: left;
+}
+
+pre {
+	font-family: Courier, Courier New, monospace;
+}
+
+h1,h2,h3 {
+	font-variant: small-caps;
+}
+
+.page .miniframe {
+	position: relative;
+	width: 700px;
+	margin: 5px 5px;
+	padding: 5px 20px 10px 20px;
+	margin-left: auto;
+	margin-right: auto;
+	background-color: #ffffce;
+	color: black;
+	border: 1px solid #000080;
+}
+
+th {
+	text-align: right;
+	padding: 7px;
+}
+
+.popup {
+	text-align: left;
+}
+
+.popup th, .popup td {
+	padding: 7px;
+	vertical-align: top;
+}
+
+.popup td {
+	background-color: white;
+	font-family: Courier, Courier New, monospace;
+}
+</style>
+<xi:include py:for="head_included_template in head_included_templates"
+	href="${head_included_template}"></xi:include>
+</head>
+<body>
+		<div id="topbar" style="width: 100%; margin: 0px auto; text-align: left">
+			<form action="">
+				<table>
+					<tr>
+						<th><label for="date_input">Date: </label></th>
+						<td><input id="date_input" type="text" /></td>
+						<th><label for="day_only_chkbox">Day only: </label></th>
+						<td><input id="day_only_chkbox" type="checkbox" /></td>
+						<td></td>
+						<td><input type="button" value="Update" id="update_button" /></td>
+					</tr>
+				</table>
+			</form>
+		</div>
+
+		<div id="tabs">
+			<ul>
+				<li py:for="tab in tabs"><a href="#tabs-${tab.tab_index+1}">${tab.tab_title}</a></li>
+			</ul>
+
+			<xi:include py:for="tab in tabs" py:with="tab_index=tab.tab_index"
+				href="${tab.tab_template}"></xi:include>
+		</div>
+
+	<script type="text/javascript">
+	$(document).ready(function() {
+
+		$("#date_input").datetimepicker({dateFormat: 'yy-mm-dd', timeFormat: 'hh:mm'});
+		
+		$("#tabs").tabs({
+			selected: $.bbq.getState('tab'),
+		    select: function(event, ui) {
+			    $.bbq.pushState({'tab': ui.index});
+		    }
+		});
+		
+		$(window).trigger('hashchange');
+	});
+	</script>
+
+	<div id="syslog_popup" style="display: none;" class="popup">
+		<table>
+			<tr>
+				<th>Device Date/Time:</th>
+				<td id="syslog_popup_device_dt"></td>
+			</tr>
+			<tr>
+				<th>Received Date/Time:</th>
+				<td id="syslog_popup_received_dt"></td>
+			</tr>
+			<tr>
+				<th>Facility:</th>
+				<td id="syslog_popup_facility"></td>
+			</tr>
+			<tr>
+				<th>Severity:</th>
+				<td id="syslog_popup_severity"></td>
+			</tr>
+			<tr>
+				<th>Syslog Tag:</th>
+				<td id="syslog_popup_syslogtag"></td>
+			</tr>
+			<tr>
+				<th>Message:</th>
+				<td><pre id="syslog_popup_message"> </pre></td>
+			</tr>
+		</table>
+	</div>
+
+	<div id="apachehttpdlogs_popup" style="display: none;" class="popup">
+		<table>
+			<tr>
+				<th>Event Date/Time:</th>
+				<td id="apachehttpdlogs_popup_event_dt" colspan="5"></td>
+			</tr>
+			<tr>
+				<th>Logger ID:</th>
+				<td id="apachehttpdlogs_popup_logger_id" colspan="1"></td>
+				<th>Hostname:</th>
+				<td id="apachehttpdlogs_popup_hostname" colspan="3"></td>
+			</tr>
+			<tr>
+				<th>IP Address:</th>
+				<td id="apachehttpdlogs_popup_ip_addr" colspan="1"></td>
+				<th>Authname:</th>
+				<td id="apachehttpdlogs_popup_authname" colspan="3"></td>
+			</tr>
+			<tr>
+				<th>Status:</th>
+				<td id="apachehttpdlogs_popup_status"></td>
+				<th>Size:</th>
+				<td id="apachehttpdlogs_popup_size"></td>
+				<th>protocol:</th>
+				<td id="apachehttpdlogs_popup_protocol"></td>
+			</tr>
+			<tr>
+				<th>Path:</th>
+				<td colspan="5"><pre id="apachehttpdlogs_popup_apachehttpdlogstag"> </pre></td>
+			</tr>
+			<tr>
+				<th>Refer(r)er:</th>
+				<td colspan="5"><pre id="apachehttpdlogs_popup_referer"> </pre>
+				</td>
+			</tr>
+			<tr>
+				<th>User Agent:</th>
+				<td colspan="5"><pre id="apachehttpdlogs_popup_useragent"> </pre>
+				</td>
+			</tr>
+		</table>
+	</div>
+
+	<div id="logback_popup" style="display: none;" class="popup">
+		<table>
+			<tr>
+				<th colspan="1">Event Date/Time:</th>
+				<td id="logback_popup_event_dt" colspan="5"></td>
+				<th>Level:</th>
+				<td id="logback_popup_level" colspan="1"></td>
+			</tr>
+			<tr>
+				<th>Logger ID:</th>
+				<td id="logback_popup_logger_id" colspan="2"></td>
+				<th>Logger:</th>
+				<td id="logback_popup_logger" colspan="4"></td>
+			</tr>
+			<tr>
+				<th>Class:</th>
+				<td id="logback_popup_class" colspan="2"></td>
+				<th>Method:</th>
+				<td id="logback_popup_method" colspan="2"></td>
+				<th>Line:</th>
+				<td id="logback_popup_line" colspan="1"></td>
+			</tr>
+			<tr>
+				<th>Message:</th>
+				<td id="logback_popup_message" colspan="7"></td>
+			</tr>
+			<tr>
+				<th>Exception:</th>
+				<td colspan="7"><pre id="logback_popup_exception"> </pre></td>
+			</tr>
+		</table>
+		<table id="logback_popup_proptable">
+		</table>
+	</div>
+</body>
+</html>

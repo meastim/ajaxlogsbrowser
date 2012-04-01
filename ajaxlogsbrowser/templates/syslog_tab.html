@@ -1,0 +1,232 @@
+<div xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:py="http://genshi.edgewall.org/"
+	xmlns:xi="http://www.w3.org/2001/XInclude"
+	id="tabs-${tab_index+1}" class="tab">
+<!--
+#
+# Copyright (c) 2012  Meastim
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+ -->
+	<div>
+		<form>
+			<table>
+				<tr>
+					<th><label for="select_host${tab_index+1}">Host: </label></th>
+					<td><select id="select_host${tab_index+1}"><option></option>
+					</select></td>
+					<th><label for="select_facility${tab_index+1}">Facility: </label></th>
+					<td><select id="select_facility${tab_index+1}"><option></option>
+					</select></td>
+					<th><label for="select_sev_thres${tab_index+1}">Severity Threshold: </label></th>
+					<td><select id="select_sev_thres${tab_index+1}"><option></option>
+					</select></td>
+					<th><label for="syslogtag_prefix_input${tab_index+1}">Syslog Tag Prefix: </label>
+					</th>
+					<td><input id="syslogtag_prefix_input${tab_index+1}" type="text" />
+					</td>
+				</tr>
+			</table>
+		</form>
+	</div>
+	<div id="log_grid${tab_index+1}" class="log_grid"> </div>
+
+	<script type="text/javascript">
+	//<![CDATA[
+	$(function() {		
+		$.each(SYSLOG_FACILITY, function(key, value) {   
+		     $('#select_facility${tab_index+1}')
+		         .append($("<option></option>")
+		         .attr("value",key)
+		         .text(value)); 
+		});
+		$.each(SYSLOG_SEVERITY, function(key, value) {   
+		     $('#select_sev_thres${tab_index+1}')
+		         .append($("<option></option>")
+		         .attr("value",key)
+		         .text(value)); 
+		});
+		
+		var spin_opts = {
+			lines : 12,
+			length : 7,
+			width : 4,
+			radius : 10,
+			color : '#000',
+			speed : 1,
+			trail : 60,
+			shadow : false,
+			hwaccel : false
+		};
+		var spinner = null;
+
+		var columns = [
+	   	    { id: "received_dt", name: "Received Date/Time", field: "received_dt", width: 200, cssClass: "received_dt" },
+		    { id: "facility", name: "Facility", field: "facility", cssClass: "syslogfac", width: 80 },
+		    { id: "severity", name: "Severity", field: "severity", cssClass: "syslogsev", width: 80 },
+		    { id: "host", name: "Host", field: "fromhost", width: 80 },
+		    { id: "syslogtag", name: "Syslog Tag", field: "syslogtag", width: 80 },
+		    { id: "message", name: "Message", field: "message", width: 350 }
+		];
+
+		var sg_options = {
+				formatterFactory: syslogFormatterFactory
+		};
+		
+		var offset = $('#log_grid${tab_index+1}').offset();
+		$('#log_grid${tab_index+1}').height($(window).height() - offset.top - 50);
+
+		var loader = new AjaxLogsBrowser.SyslogRemoteModel();
+		loader.data.getItemMetadata = function (rowNum) {
+			var cssClasses = "";
+			var row = this[rowNum];
+			if (row) {
+				if (SYSLOG_FACILITY.hasOwnProperty(row["facility"])) {
+					cssClasses += " syslogfac_" + SYSLOG_FACILITY[row["facility"]];
+				}
+				if (SYSLOG_SEVERITY.hasOwnProperty(row["severity"])) {
+					cssClasses += " syslogsev_" + SYSLOG_SEVERITY[row["severity"]];
+				}
+				if (cssClasses) {
+					return {
+						"cssClasses": cssClasses
+					};
+				}
+			}
+		}
+
+		$("#update_button").click(function() {
+			if ($("#tabs").tabs('option', 'selected') == ${tab_index}) {
+				var state = {
+					searchDateTime: $("#date_input").val(),
+					allDays: $("#day_only_chkbox").prop("checked") ? "0" : "1",
+							
+					host: $("#select_host${tab_index+1}").val(),
+					facility: $("#select_facility${tab_index+1}").val(),
+					levelThreshold: $("#select_sev_thres${tab_index+1}").val(),
+					tagPrefix: $("#syslogtag_prefix_input${tab_index+1}").val()
+				};
+				if ($.bbq.getState('tab') == null) {
+					state['tab'] = 0;
+				}
+				$.bbq.pushState(state);
+			}
+		});
+
+		$(window).bind('hashchange', function(e) {
+			if ($.bbq.getState('tab') == "${tab_index}") {
+				$("#date_input").val($.bbq.getState('searchDateTime'));
+				$("#day_only_chkbox").prop("checked", $.bbq.getState('allDays') === "1" ? false : true);
+				
+				$("#select_host${tab_index+1}").val($.bbq.getState('host'));
+				$("#select_facility${tab_index+1}").val($.bbq.getState('facility'));
+				$("#select_sev_thres${tab_index+1}").val($.bbq.getState('levelThreshold'));
+				$("#syslogtag_prefix_input${tab_index+1}").val($.bbq.getState('tagPrefix'));
+	
+				loader.setSearchOptions($.extend({ tabIndex: "${tab_index}" }, $.bbq.getState()));
+
+				var vp = grid.getViewport();
+		        loader.ensureData(vp.top, vp.bottom, true);
+		        grid.render();
+			}
+		});
+
+		var grid = new Slick.Grid("#log_grid${tab_index+1}", loader.data, columns, sg_options);
+		grid.setSelectionModel(new Slick.RowSelectionModel());
+
+		grid.onViewportChanged.subscribe(function(e, args) {
+			var vp = grid.getViewport();
+			loader.ensureData(vp.top, vp.bottom, false);
+		});
+
+		loader.onDataLoading.subscribe(function() {			
+			if (spinner == null) {
+				spinner = new Spinner(spin_opts).spin(document.getElementById('log_grid${tab_index+1}'));
+			} else {
+				spinner.spin(document.getElementById('log_grid${tab_index+1}'));
+			}
+		});
+
+		loader.onDataLoaded.subscribe(function(e, args) {
+			if (spinner != null) {
+				spinner.stop();
+			}
+			for (var i = args.from; i <= args.to; i++) {
+				grid.invalidateRow(i);
+			}
+			grid.updateRowCount();
+			grid.render();
+
+			if (grid.renderViewport) {
+				grid.renderViewport();
+			}
+
+			var currentHost = $("#select_host${tab_index+1}").val();
+			$("#select_host${tab_index+1}").find('option').remove();
+			$('#select_host${tab_index+1}').append($("<option></option>"));
+			$.each(args.hosts, function(key, value) {   
+			     $('#select_host${tab_index+1}')
+			         .append($("<option></option>")
+			         .text(value)); 
+			});
+			$("#select_host${tab_index+1}").val(currentHost);
+
+			if (args.scrollTo != null) {
+				grid.scrollRowIntoView(args.scrollTo, true);
+			}
+		});
+
+		$("#date_input${tab_index+1}").val($.bbq.getState('searchDateTime'));
+		$("#select_host${tab_index+1}").val($.bbq.getState('host'));
+		$("#select_facility${tab_index+1}").val($.bbq.getState('facility'));
+		$("#select_sev_thres${tab_index+1}").val($.bbq.getState('levelThreshold'));
+		$("#syslogtag_prefix_input${tab_index+1}").val($.bbq.getState('tagPrefix'));
+		
+		$(window).trigger('hashchange');
+
+		$("#syslog_popup").dialog({ autoOpen: false, width: 1000, height: 600 });
+		grid.onDblClick.subscribe(function(e, args) {
+			$("#syslog_popup_device_dt").text(loader.data[args.row]['device_dt']);
+			$("#syslog_popup_received_dt").text(loader.data[args.row]['received_dt']);
+			$("#syslog_popup_facility").text(SYSLOG_FACILITY[loader.data[args.row]['facility']]);
+			$("#syslog_popup_severity").text(SYSLOG_SEVERITY[loader.data[args.row]['severity']]);
+			$("#syslog_popup_syslogtag").text(loader.data[args.row]['syslogtag']);
+			$("#syslog_popup_message").text(loader.data[args.row]['message'].replace(/#012/g,"\n"));
+			$("#syslog_popup").dialog('open');
+		});
+
+		$(window).resize(function() {
+			var offset = $('#log_grid${tab_index+1}').offset();
+			$('#log_grid${tab_index+1}').height($(window).height() - offset.top - 50);
+			grid.resizeCanvas();
+		});
+		
+		$("#tabs").bind("tabsshow", function(event, ui) {
+			if (ui.index == ${tab_index}) {
+				var offset = $('#log_grid${tab_index+1}').offset();
+				$('#log_grid${tab_index+1}').height($(window).height() - offset.top - 50);
+				grid.resizeCanvas();
+			}
+		});
+	});
+	//]]>
+	</script>
+</div>

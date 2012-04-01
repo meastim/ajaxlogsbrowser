@@ -1,0 +1,65 @@
+<script xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:py="http://genshi.edgewall.org/"
+	xmlns:xi="http://www.w3.org/2001/XInclude" lang="en"
+	type="text/javascript">
+	var SYSLOG_FACILITY = {
+		0 : "KERN",
+		1 : "USER",
+		2 : "MAIL",
+		3 : "DAEMON",
+		4 : "AUTH",
+		5 : "SYSLOG",
+		6 : "LPR",
+		7 : "NEWS",
+		8 : "UUCP",
+		9 : "CRON",
+		10 : "SECURITY",
+		11 : "FTP",
+		12 : "NTP",
+		13 : "LOGAUDIT",
+		14 : "LOGALERT",
+		15 : "CLOCK",
+		16 : "LOCAL0",
+		17 : "LOCAL1",
+		18 : "LOCAL2",
+		19 : "LOCAL3",
+		20 : "LOCAL4",
+		21 : "LOCAL5",
+		21 : "LOCAL6",
+		23 : "LOCAL7"
+	};
+
+	var SYSLOG_SEVERITY = {
+		0 : "EMERGENCY",
+		1 : "ALERT",
+		2 : "CRITICAL",
+		3 : "ERROR",
+		4 : "WARNING",
+		5 : "NOTICE",
+		6 : "INFO",
+		7 : "DEBUG"
+	};
+
+	var syslogFormatterFactory = {
+		"getFormatter" : function(column) {
+			if (column["id"] === "facility") {
+				return function(row, cell, value, columnDef, dataContext) {
+					if (SYSLOG_FACILITY.hasOwnProperty(value)) {
+						return SYSLOG_FACILITY[value] || value;
+					} else {
+						return value;
+					}
+				};
+			} else if (column["id"] === "severity") {
+				return function(row, cell, value, columnDef, dataContext) {
+					if (SYSLOG_SEVERITY.hasOwnProperty(value)) {
+						return SYSLOG_SEVERITY[value] || value;
+					} else {
+						return value;
+					}
+				};
+			}
+			return null;
+		}
+	};
+</script>
