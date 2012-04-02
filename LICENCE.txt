@@ -24,7 +24,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 * Some portions of this application (the SlickGrid remote modules)
-  are derived from SlickGrid's code:
+  are derived from SlickGrid's example code:
     
 Copyright (c) 2010 Michael Leibman, http://github.com/mleibman/slickgrid
 
