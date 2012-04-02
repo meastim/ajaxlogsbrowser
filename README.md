@@ -35,6 +35,15 @@ This was mainly tested on Debian/Ubuntu, but shouldn't need much adaptation
 for other platforms.
 
 
+If you have not started to use PostgreSQL yet, it is probably better to allow
+for a UTF-8 encoding (if it's not already the case). You can delete and 
+rebuild your cluser using (NOTE THAT THIS WILL DELETE YOUR EXISTING DATA):
+
+    pg_dropcluster --stop 8.4 main
+    pg_createcluster --locale=en_GB.utf8 --start 8.4 main
+
+
+
 Usage / Installation
 ====================
 
@@ -66,16 +75,24 @@ details about the connection strings and parameters.
 Standalone
 ----------
 
-test_sample.py is a sample standalone server. Make sure PYTHONPATH is set 
+`test_sample.py` is a sample standalone server. Make sure PYTHONPATH is set 
 correctly to be able to run it.
 
 
 Fcgid
 -----
 
-cherryd_sample.fcgi shows a sample FCGI script.
+`cherryd_sample.fcgi` shows a sample FCGI script.
 You may need to adapt the path to the python interpreter as well as the
 path to the site directory using `site.addsitedir`.
+
+You should then be able to use this in your Apache Httpd configuration:
+
+    ScriptAlias /logs/ /path/to/ajaxlogsbrowser/cherryd.fcgi/
+    
+    # If you want to use mod_rewrite for the trailing slash:
+    # RewriteEngine On
+    # RewriteRule ^/logs$ /logs/ [R]
 
 
 Rsyslog
@@ -127,8 +144,11 @@ create the table in PostgreSQL.
 
 In the Apache Httpd configuration use:
 
-    CustomLog "|/path/to/apachehttpd_log2pg.py" combined
-    
+    CustomLog "|/path/to/apachehttpd_log2pg.py LoggerID MachineName" combined
+
+If you are collecting logs from multiple sources into the same database, 
+LoggerID and MachineName are parameters to help you distinguish those sources.
+
 Adapt the `connect` parameters as needed to authenticate. You can also create
 a PostgreSQL user called `root` which will be able to authenticate via ident.
 Grant table access accordingly. For example:
