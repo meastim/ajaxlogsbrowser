@@ -87,9 +87,9 @@ class LogbackModule(object):
         #
         
         params = []
-        query = " SELECT COUNT(le.event_id) FROM logging_event le"
+        query = " SELECT COUNT(le.event_id) FROM logging_event le "
         if logger_id:
-            query += """INNER JOIN logging_event_property logger_id
+            query += """ LEFT JOIN logging_event_property logger_id
     ON le.event_id=logger_id.event_id AND logger_id.mapped_key='LOGGER_ID' WHERE logger_id.mapped_value=%s """
             params.append(logger_id)
         else:
@@ -132,9 +132,9 @@ class LogbackModule(object):
         #
         
         params = []
-        query = " SELECT COUNT(le.event_id) FROM logging_event le"
+        query = " SELECT COUNT(le.event_id) FROM logging_event le "
         if logger_id:
-            query += """INNER JOIN logging_event_property logger_id
+            query += """ LEFT JOIN logging_event_property logger_id
     ON le.event_id=logger_id.event_id AND logger_id.mapped_key='LOGGER_ID' WHERE logger_id.mapped_value=%s """
             params.append(logger_id)
         else:
@@ -186,11 +186,12 @@ class LogbackModule(object):
         params = []
         query = """ SELECT (TIMESTAMP WITH TIME ZONE 'epoch' + le.timestmp/1000 * INTERVAL '1 second')::text,
             le.formatted_message, le.logger_name, le.level_string, le.thread_name, le.reference_flag,
-            le.arg0, le.arg1, le.arg2, le.arg3, le.caller_filename, le.caller_class, le.caller_method, le.caller_line, le.event_id
-            FROM logging_event le """
+            le.arg0, le.arg1, le.arg2, le.arg3, le.caller_filename, le.caller_class, le.caller_method, le.caller_line, le.event_id,
+            logger_id.mapped_value
+            FROM logging_event le LEFT JOIN logging_event_property logger_id
+                ON le.event_id=logger_id.event_id AND logger_id.mapped_key='LOGGER_ID' """
         if logger_id:
-            query += """INNER JOIN logging_event_property logger_id
-    ON le.event_id=logger_id.event_id AND logger_id.mapped_key='LOGGER_ID' WHERE logger_id.mapped_value=%s """
+            query += " WHERE logger_id.mapped_value=%s "
             params.append(logger_id)
         else:
             query += " WHERE TRUE "
@@ -229,7 +230,7 @@ class LogbackModule(object):
         cursor.execute(query, params)
         for row in cursor:
             results.append({
-                "logger_id": logger_id,
+                "logger_id": row[15] or '',
                 "id": row[14],
                 "event_dt": row[0],
                 "message": row[1],
